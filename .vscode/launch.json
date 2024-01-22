@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flask App",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "args": ["run"],
+      "stopOnEntry": false,
+      //   "cwd": "${workspaceFolder}",
+      //   "python": "${config:pythonPath}",
+      "env": {
+        "FLASK_APP": "${workspaceFolder}/app.py",
+        "FLASK_ENV": "development",
+        "FLASK_USER": "sbl2933"
+      },
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}
