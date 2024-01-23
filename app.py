@@ -10,7 +10,7 @@ connection = MSSQL()
 @app.route('/get_permissionUser/', methods=['GET'])
 def get_permissionUser():
     
-    sql = '''SELECT * FROM testtbl'''
+    sql = '''SELECT wurst FROM testtbl2'''
     data = connection.get_queried_data(True,sql)
     
     #print(request.environ)
