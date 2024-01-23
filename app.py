@@ -1,13 +1,19 @@
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 import jwt
+from DbManager import MSSQL
 
 app = Flask(__name__)
+connection = MSSQL()
+
 
 @app.route('/get_permissionUser/', methods=['GET'])
 def get_permissionUser():
     
-    print(request.environ)
+    sql = '''SELECT * FROM testtbl'''
+    data = connection.get_queried_data(True,sql)
+    
+    #print(request.environ)
     # Reha ruft in der Datenbank authapi den App Secret Key ab.
     # --> Die Anwendung Reha sendet den App Secret Key zusammen mit der WindowsKennung verschlüsselt mit JWT an die AuthApi App.
     # --> Dort wird der JWT Token entschlüsselt
@@ -15,7 +21,8 @@ def get_permissionUser():
     # --> Falls ja --> Werden die Berechtigungen der App Reha abgefragt und zurück an die App Reha gesendet
     # --> Falls nein --> es werden keine Berechtigungen zurück geschickt.
     
-    return jsonify({'Hello1' :  'World!'})
+    # return jsonify({"test":'test'})
+    return jsonify(data)
 
 def get_permissions():
 

@@ -13,7 +13,7 @@ services:
     image: nginx:1.25.3
     container_name: authapi-nginx
     ports:
-      - "80:80"
+      - "81:80"
     depends_on:
       - authapi-app
     volumes:

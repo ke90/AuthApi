@@ -9,10 +9,10 @@ class MSSQL(Dbconnection):
     
     
     def __init__(self):
-        self.ip = '127.0.0.1'
-        self.pw = ''
-        self.db = 'authapi'
-        self.user = 'root'
+        self.ip = 'db'
+        self.pw = 'Ke123456'
+        self.db = 'test'
+        self.user = 'sa'
         self.port = '1433'  # Standardmäßig verwendet MSSQL den Port 1433
         self.dashlog = DashLog()
 
