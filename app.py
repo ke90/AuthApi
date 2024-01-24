@@ -7,8 +7,11 @@ import json
 app = Flask(__name__)
 connection = MSSQL()
 
+@app.route('/index', methods=['GET'])
+def index():
+    return "Startseite"
 
-def verifyToken():
+def verifyToken(endpoint):
     if not request.cookies.get('api_token'):
         print("User nicht authentifiziert --> Starte Authentifizierung")
         return redirect('/authenticate')
@@ -19,8 +22,11 @@ def verifyToken():
 
 @app.route('/authenticate', methods=['GET'])
 def authenticate():
+    print('In authenticate')
+    print(request.args.get('next'))
     # response = app.response_class(response=redirect('/get_permissionUser'), status=302)
-    next_url = request.args.get('next') or url_for('index') # Index ist eine Standardroute die aufgerufen wird, falls keine route vorhanden war...
+    next_url = request.args.get('next') or url_for('index')
+    print(next_url)
     response = make_response(redirect(next_url))
     encode = jwt.encode({"user":"sbl2933", "permission":['admin']},"wurstwasser","HS256")
     response.set_cookie('api_token',encode)
@@ -30,8 +36,13 @@ def authenticate():
 
 @app.route('/get_permissionUser', methods=['GET'])
 def get_permissionUser():
+    if not request.cookies.get('api_token'):
+        print("User nicht authentifiziert --> Starte Authentifizierung")
+        return redirect(url_for('authenticate', next=request.endpoint))
+    else:
+        print("Token vorhanden")
 
-    verifyToken()
+    # verifyToken(next=request.endpoint)
     token = request.cookies.get('api_token')
     print(token)
     
