@@ -4,6 +4,14 @@ import jwt
 from DbManager import MSSQL,DashLog
 import json
 
+
+    # '''Reha ruft in der Datenbank authapi den App Secret Key ab.
+    #     --> Die Anwendung Reha sendet den App Secret Key zusammen mit der WindowsKennung verschlüsselt mit JWT an die AuthApi App.
+    #     --> Dort wird der JWT Token entschlüsselt
+    #     --> Der App Secret Key wird gegengeprüft, ob dieser in der authapi Datenbank steht.
+    #     --> Falls ja --> Werden die Berechtigungen der App Reha abgefragt und zurück an die App Reha gesendet
+    #     --> Falls nein --> es werden keine Berechtigungen zurück geschickt.'''
+
 app = Flask(__name__)
 connection = MSSQL()
 dl = DashLog()
@@ -44,15 +52,7 @@ def authenticate():
     
 
 @app.route('/get_permissionUser', methods=['GET'])
-def get_permissionUser():
-    ''' print(request.environ)
-        Reha ruft in der Datenbank authapi den App Secret Key ab.
-        --> Die Anwendung Reha sendet den App Secret Key zusammen mit der WindowsKennung verschlüsselt mit JWT an die AuthApi App.
-        --> Dort wird der JWT Token entschlüsselt
-        --> Der App Secret Key wird gegengeprüft, ob dieser in der authapi Datenbank steht.
-        --> Falls ja --> Werden die Berechtigungen der App Reha abgefragt und zurück an die App Reha gesendet
-        --> Falls nein --> es werden keine Berechtigungen zurück geschickt.'''
-        
+def get_permissionUser():        
         
     if not request.cookies.get('api_token'):
         print("User nicht authentifiziert --> Starte Authentifizierung")
