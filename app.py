@@ -1,31 +1,40 @@
-from flask import Flask, jsonify, request, make_response,redirect, url_for
+from flask import Flask, jsonify, request, make_response,redirect, url_for,abort
 from flask_restful import Api, Resource
 import jwt
-from DbManager import MSSQL
+from DbManager import MSSQL,DashLog
 import json
 
 app = Flask(__name__)
 connection = MSSQL()
+dl = DashLog()
 
-@app.route('/index', methods=['GET'])
-def index():
-    return "Startseite"
 
-def verifyToken(endpoint):
-    if not request.cookies.get('api_token'):
-        print("User nicht authentifiziert --> Starte Authentifizierung")
-        return redirect('/authenticate')
-    else:
-        print("Token wurde erstellt...")
+#TODO
+# ARCHIV! WIRD NOCH UMGEBAUT
+# def verifyToken():
+#     if not request.cookies.get('api_token'):
+#         print("User nicht authentifiziert --> Starte Authentifizierung")
+#         print(request.endpoint)
+#         return redirect(url_for('authenticate',next=request.endpoint))
+#     else:
+#         print("Token wurde erstellt...")
         
-    return True
+#     return True
+
+def checkToken(token):
+    decoded_token = None
+    try:
+        decoded_token = jwt.decode(token,"wurstwasser","HS256")
+        return decoded_token
+    except:
+        dl.send_log(2,'Fehlerhafter Token')
+        return abort(403)
 
 @app.route('/authenticate', methods=['GET'])
 def authenticate():
-    print('In authenticate')
-    print(request.args.get('next'))
+    print("Authenticate")
     # response = app.response_class(response=redirect('/get_permissionUser'), status=302)
-    next_url = request.args.get('next') or url_for('index')
+    next_url = request.args.get('next')
     print(next_url)
     response = make_response(redirect(next_url))
     encode = jwt.encode({"user":"sbl2933", "permission":['admin']},"wurstwasser","HS256")
@@ -36,59 +45,37 @@ def authenticate():
 
 @app.route('/get_permissionUser', methods=['GET'])
 def get_permissionUser():
+    ''' print(request.environ)
+        Reha ruft in der Datenbank authapi den App Secret Key ab.
+        --> Die Anwendung Reha sendet den App Secret Key zusammen mit der WindowsKennung verschlüsselt mit JWT an die AuthApi App.
+        --> Dort wird der JWT Token entschlüsselt
+        --> Der App Secret Key wird gegengeprüft, ob dieser in der authapi Datenbank steht.
+        --> Falls ja --> Werden die Berechtigungen der App Reha abgefragt und zurück an die App Reha gesendet
+        --> Falls nein --> es werden keine Berechtigungen zurück geschickt.'''
+        
+        
     if not request.cookies.get('api_token'):
         print("User nicht authentifiziert --> Starte Authentifizierung")
-        return redirect(url_for('authenticate', next=request.endpoint))
+        return redirect(url_for('authenticate',next=request.endpoint))
     else:
-        print("Token vorhanden")
-
-    # verifyToken(next=request.endpoint)
+        print("Token wurde erstellt...")
+        
     token = request.cookies.get('api_token')
-    print(token)
-    
-    sql = '''SELECT * FROM testtbl2'''
-    data = connection.get_queried_data(True,sql)
-    
-    #print(request.environ)
-    # Reha ruft in der Datenbank authapi den App Secret Key ab.
-    # --> Die Anwendung Reha sendet den App Secret Key zusammen mit der WindowsKennung verschlüsselt mit JWT an die AuthApi App.
-    # --> Dort wird der JWT Token entschlüsselt
-    # --> Der App Secret Key wird gegengeprüft, ob dieser in der authapi Datenbank steht.
-    # --> Falls ja --> Werden die Berechtigungen der App Reha abgefragt und zurück an die App Reha gesendet
-    # --> Falls nein --> es werden keine Berechtigungen zurück geschickt.
-    
-    # return jsonify({"test":'test'})
-    response = app.response_class(response=json.dumps(data), status=200, mimetype='application/json')
-    # return jsonify(data)
-    return response
+    valid = checkToken(token)
+
+    if valid:
+        sql = '''SELECT * FROM testtbl2'''
+        data = connection.get_queried_data(True,sql)
+        response = app.response_class(response=json.dumps(data), status=200, mimetype='application/json')
+        return response
+    else:
+        abort(403)
 
 @app.route('/get_permissionsTeam', methods=['GET'])
 def get_permissions():
-
-    verifyToken()
-
     #encode = jwt.encode({"user":"sbl2933"},"wurstwasser","HS256")
 
-
-    # TODO
-    # User ruft im Browser die URL auf.
-    # Es wird ein JWT Token generiert mit dem Windowslogin
-    # Dieser wird an das Frontend zurückgegeben und im LocalStorageg gespeichert. Das Frontend zeigt "Weiterleitung an." Der JWT Token im LocalStorage wird an eine neue Route im Backend gesendet 
-    # Dort wird der Token decodiert und man erhält den WindowsLogin. 
-    # In der Funktion wird nun geprüft, über die Datenbank "authapi" ob der WindowsUser aus dem Token die Berechtigung hat, die Berechtigungen aus der Datenbank zusehen.*args
-    # Bei Ja werden die Berechtigungen zurückgegeben.
-    # Hintergrund dieser Methode: Der User könnte eventuell den WindowsLogin Clientseitig manipulieren. Somit könnte er nach der aktuellen Methode die Berechtigungen von anderen WindowsUsers ausgegeben bekommen.
-    
-
-    # Vorerst:
-    # Beim Aufruf der URL wird der WindowsUser ausgelesen
-    # Das Backend prüft in der "authapi" Datenbank, ob der WindowsUser die Berechtigung besitzt die Berechtigungen zu sehen.*args
-    # Falls Ja --> werden diese zurückgegeben
-
     return jsonify({"dwa1":"dwad1"})
-    #return jsonify({"token":encode})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-    #app.run(debug=True)
