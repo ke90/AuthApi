@@ -1,16 +1,34 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response,redirect
 from flask_restful import Api, Resource
 import jwt
 from DbManager import MSSQL
+import json
 
 app = Flask(__name__)
 connection = MSSQL()
 
 
-@app.route('/get_permissionUser/', methods=['GET'])
-def get_permissionUser():
+
+@app.route('/authenticate', methods=['GET'])
+def authenticate():
+    # response = app.response_class(response=redirect('/get_permissionUser'), status=302)
+    response = make_response(redirect('/get_permissionUser'))
+    encode = jwt.encode({"user":"sbl2933", "permission":['admin']},"wurstwasser","HS256")
+    response.set_cookie('api_token',encode)
+    return response
+    # jwt.encode()
     
-    sql = '''SELECT * FROM 1testtbl'''
+
+@app.route('/get_permissionUser', methods=['GET'])
+def get_permissionUser():
+    if not request.cookies.get('api_token'):
+        print("Nicht eingeloggt, ab ins authenticate")
+        return redirect('/authenticate')
+    
+    token = request.cookies.get('api_token')
+    print(token)
+    
+    sql = '''SELECT * FROM testtbl2'''
     data = connection.get_queried_data(True,sql)
     
     #print(request.environ)
@@ -22,7 +40,9 @@ def get_permissionUser():
     # --> Falls nein --> es werden keine Berechtigungen zurück geschickt.
     
     # return jsonify({"test":'test'})
-    return jsonify(data)
+    response = app.response_class(response=json.dumps(data), status=200, mimetype='application/json')
+    # return jsonify(data)
+    return response
 
 def get_permissions():
 

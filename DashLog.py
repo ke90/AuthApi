@@ -8,7 +8,7 @@ import json
 
 class DashLog:
     def __init__(self):
-        self.url = 'http://127.0.0.1:1337/api/logger/webhook2/'
+        self.url = 'http://host.docker.internal:1337/api/logger/webhook2/'
         self.data = {
             'id_app': 7,
         }
