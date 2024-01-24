@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, make_response,redirect
+from flask import Flask, jsonify, request, make_response,redirect, url_for
 from flask_restful import Api, Resource
 import jwt
 from DbManager import MSSQL
@@ -8,11 +8,20 @@ app = Flask(__name__)
 connection = MSSQL()
 
 
+def verifyToken():
+    if not request.cookies.get('api_token'):
+        print("User nicht authentifiziert --> Starte Authentifizierung")
+        return redirect('/authenticate')
+    else:
+        print("Token wurde erstellt...")
+        
+    return True
 
 @app.route('/authenticate', methods=['GET'])
 def authenticate():
     # response = app.response_class(response=redirect('/get_permissionUser'), status=302)
-    response = make_response(redirect('/get_permissionUser'))
+    next_url = request.args.get('next') or url_for('index') # Index ist eine Standardroute die aufgerufen wird, falls keine route vorhanden war...
+    response = make_response(redirect(next_url))
     encode = jwt.encode({"user":"sbl2933", "permission":['admin']},"wurstwasser","HS256")
     response.set_cookie('api_token',encode)
     return response
@@ -21,10 +30,8 @@ def authenticate():
 
 @app.route('/get_permissionUser', methods=['GET'])
 def get_permissionUser():
-    if not request.cookies.get('api_token'):
-        print("Nicht eingeloggt, ab ins authenticate")
-        return redirect('/authenticate')
-    
+
+    verifyToken()
     token = request.cookies.get('api_token')
     print(token)
     
@@ -44,7 +51,10 @@ def get_permissionUser():
     # return jsonify(data)
     return response
 
+@app.route('/get_permissionsTeam', methods=['GET'])
 def get_permissions():
+
+    verifyToken()
 
     #encode = jwt.encode({"user":"sbl2933"},"wurstwasser","HS256")
 
@@ -64,7 +74,7 @@ def get_permissions():
     # Das Backend prüft in der "authapi" Datenbank, ob der WindowsUser die Berechtigung besitzt die Berechtigungen zu sehen.*args
     # Falls Ja --> werden diese zurückgegeben
 
-    return jsonify({})
+    return jsonify({"dwa1":"dwad1"})
     #return jsonify({"token":encode})
 
 if __name__ == '__main__':
