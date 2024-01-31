@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, make_response,redirect, url_for,abort
 from flask_restful import Api, Resource
 import jwt
-from DbManager import MSSQL,DashLog
+from DbManager import MSSQL, DashLog
 import json
 
 
@@ -82,48 +82,52 @@ def get_permissionUser():
 @app.route('/getPermissions', methods=['GET'])
 def getPermissions():
 
-    # JWT Token aus dem Header abrufen
-    token = request.headers.get('Authorization')
-    if not token:
+    token_with_bearer = request.headers.get('Authorization')
+    if not token_with_bearer:
         abort(403, description="JWT Token is missing")
 
-    # App-ID aus dem Query-String-Parameter abrufen
     app_id = request.args.get('appID')
     if not app_id:
         abort(400, description="App ID is missing")
 
-    print("-------In app.py")
-    print(app_id)
-    print(token)
-    params = [app_id]
+    if token_with_bearer.startswith('Bearer '):
+        token = token_with_bearer[7:]
+    else:
+        token = token_with_bearer
 
-    sql = '''SELECT id,appname,secretkey FROM apps WHERE id = 1'''
-    authdata = connection.get_queried_data(True,sql)
-    print(authdata)
-    if authdata[0]['secretkey']:
-        decoded_token = jwt.decode(token,authdata[0]['secretkey'],"HS256")
+    params = (app_id,)
+    sql = '''SELECT id,appname,secretkey FROM apps WHERE id = %s'''
+    authdata = connection.get_queried_data(True,sql,params)
 
-        if decoded_token:
-            params = params + decoded_token['windows_login']
+    if not authdata or not authdata[0]['secretkey']:
+        abort(403, description="Secret Key not found")
+    
+    try:
+        secretkey = authdata[0]['secretkey']
+        decoded_token = jwt.decode(token,secretkey,algorithms=["HS256"])
+    except jwt.ExpiredSignatureError as e:
+        dl.send_log(2,"Token has expired" + str(e))
+        abort(403, description="Token has expired")
+    except jwt.InvalidTokenError as e:
+        dl.send_log(2,"Invalid token" + str(e))
+        abort(404, description="Invalid token")
+    except Exception as e:
+        # Andere Fehler
+        dl.send_log(2, f'Exception in getPermissions: {e}')
+        abort(500, description="Internal Server Error")
+    
+    if decoded_token:
+        windows_login = (decoded_token['windows_login'],)
+        params = params + windows_login
 
-            sql = '''SELECT windows_kennung, permission, appname, secretkey FROM permission_zuordnung
-                        INNER JOIN permissions p ON p.id = permission_zuordnung.permission_id
-                        INNER JOIN apps a ON a.id = p.app_id WHERE p.app_id = %s AND windows_kennung = %s'''
-            permissions = connection.get_queried_data(True,sql,params)
-            response = app.response_class(response=json.dumps(permissions), status=200, mimetype='application/json')
-            return response
-        else:
-            abort(403)
+        sql = '''SELECT windows_kennung, permission, appname FROM permission_zuordnung
+                    INNER JOIN permissions p ON p.id = permission_zuordnung.permission_id
+                    INNER JOIN apps a ON a.id = p.app_id WHERE p.app_id = %s AND windows_kennung = %s'''
+        permissions = connection.get_queried_data(True,sql,params)
+        response = app.response_class(response=json.dumps(permissions), status=200, mimetype='application/json')
+        return response
     else:
         abort(501)
-
-@app.route('/getPermissions1', methods=['GET'])
-def getPermissions1():
-    sql = '''SELECT * FROM apps'''
-    data = connection.get_queried_data(True,sql)
-    response = app.response_class(response=json.dumps(data), status=200, mimetype='application/json')
-    return response
-
     
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
