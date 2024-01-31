@@ -22,9 +22,10 @@ services:
       - app-network
 
   db:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    build: ./db
     container_name: mssql_db
     environment:
+      SA_USERNAME: "sa"
       SA_PASSWORD: "Ke123456"
       ACCEPT_EULA: "Y"
     ports:

@@ -95,8 +95,9 @@ def getPermissions():
     else:
         token = token_with_bearer
 
-    params = (app_id,)
-    sql = '''SELECT id,appname,secretkey FROM apps WHERE id = %s'''
+    params = {}
+    params['APP_ID'] = app_id
+    sql = '''SELECT id,appname,secretkey FROM apps WHERE id = %(APP_ID)s'''
     authdata = connection.get_queried_data(True,sql,params)
 
     if not authdata or not authdata[0]['secretkey']:
@@ -112,17 +113,15 @@ def getPermissions():
         dl.send_log(2,"Invalid token" + str(e))
         abort(404, description="Invalid token")
     except Exception as e:
-        # Andere Fehler
         dl.send_log(2, f'Exception in getPermissions: {e}')
         abort(500, description="Internal Server Error")
     
     if decoded_token:
-        windows_login = (decoded_token['windows_login'],)
-        params = params + windows_login
+        params['WINDOWS_LOGIN'] = decoded_token['windows_login']
 
         sql = '''SELECT windows_kennung, permission, appname FROM permission_zuordnung
                     INNER JOIN permissions p ON p.id = permission_zuordnung.permission_id
-                    INNER JOIN apps a ON a.id = p.app_id WHERE p.app_id = %s AND windows_kennung = %s'''
+                    INNER JOIN apps a ON a.id = p.app_id WHERE p.app_id = %(APP_ID)s AND windows_kennung = %(WINDOWS_LOGIN)s'''
         permissions = connection.get_queried_data(True,sql,params)
         response = app.response_class(response=json.dumps(permissions), status=200, mimetype='application/json')
         return response

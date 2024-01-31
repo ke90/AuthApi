@@ -12,8 +12,11 @@ class PermissionsRequester:
         self.app_id = 1
 
     def get_secret_key(self):
-        params = (self.app_id)
-        sql = "SELECT secretkey FROM apps WHERE id = %s"
+        # params = (self.app_id)
+        params = {}
+        params['APP_ID'] = self.app_id
+        # sql = "SELECT secretkey FROM apps WHERE id = %s"
+        sql = "SELECT secretkey FROM apps WHERE id = %(APP_ID)s"
         result = self.connection.get_queried_data(True,sql,params)
         print(result)
         return result[0]['secretkey'] if result else None
