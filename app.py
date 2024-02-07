@@ -119,11 +119,41 @@ def getPermissions():
     if decoded_token:
         params['WINDOWS_LOGIN'] = decoded_token['windows_login']
 
+        #ermittelt die Berechtigungen in der authapi-DB 
         sql = '''SELECT windows_kennung, permission, appname FROM permission_zuordnung
                     INNER JOIN permissions p ON p.id = permission_zuordnung.permission_id
                     INNER JOIN apps a ON a.id = p.app_id WHERE p.app_id = %(APP_ID)s AND windows_kennung = %(WINDOWS_LOGIN)s'''
-        permissions = connection.get_queried_data(True,sql,params)
-        response = app.response_class(response=json.dumps(permissions), status=200, mimetype='application/json')
+        permissions = connection.get_queried_data(True,sql,params,'authapi')
+
+        #ermittelt anhand der Windowskennung zusätzliche Informationen über den User im MAV
+        sql = '''SELECT [m_id]
+                    ,[m_vorname]
+                    ,[m_nachname]
+                    ,[m_login]
+                    ,CONCAT(oet.oe_typ,' ',bez.bezeichnung) AS orga
+                FROM [MAV].[dbo].[mitarbeiter]
+                LEFT JOIN m_oe_zuordnung moe ON moe.mitarbeiter_id = mitarbeiter.m_id
+                LEFT JOIN orga_einheit oe ON oe.id = moe.o_id
+                LEFT JOIN oe_bezeichnung bez ON bez.id = oe.bezeichnung_id
+                LEFT JOIN oe_typ oet ON oet.id = oe.typ_id
+                WHERE moe.haupt_oe = 1 AND m_login = %(WINDOWS_LOGIN)s'''
+        
+        userdetails = connection.get_queried_data(True,sql,params,'MAV')
+
+        merged_data = []
+
+        for perm in permissions:
+            # Findet das entsprechende userdetails-Dictionary basierend auf windows_kennung/m_login.
+            user_detail = next((ud for ud in userdetails if ud['m_login'] == perm['windows_kennung']), None)
+            
+            if user_detail:
+                merged = {**perm, **user_detail}
+                merged_data.append(merged)
+        print('MergedData')
+        print(merged_data)
+        print('----------')
+
+        response = app.response_class(response=json.dumps(merged_data), status=200, mimetype='application/json')
         return response
     else:
         abort(501)
